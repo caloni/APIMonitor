@@ -1,3 +1,11 @@
+/* API Monitor
+
+Writes API calls to a log file using Detour lib and
+a hard coded list of APIs.
+
+@author  Wanderley Caloni <wanderley.caloni@gmail.com>
+@date 2025-04
+*/
 #include "pch.h"
 #include "hooks.h"
 #include "util.h"
