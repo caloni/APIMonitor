@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "hooks.h"
 #include "util.h"
+#include <string>
+#include <sstream>
+#include <iomanip>
+#include <cctype>
 
 static std::wstring g_hookFileName = L"C:\\temp\\hook.log";
 
@@ -39,7 +43,7 @@ void LogWrite(const char* str)
 
     if( h != INVALID_HANDLE_VALUE )
     {
-        char buf[500];
+        char buf[4096];
         //sprintf_s(buf, "%s [%d:%d] [%s] %s\r\n", GetLocalTimeStamp().c_str(), static_cast<int>(GetCurrentProcessId()), static_cast<int>(GetCurrentThreadId()), GetProcessName(), str);
         sprintf_s(buf, "[%s] %s\r\n", GetProcessName(), str);
         DWORD bufLen = (DWORD) strlen(buf);
@@ -116,4 +120,43 @@ std::wstring GetFriendlyNameForCLSID(REFIID clsid)
     }
 
     return friendlyName;
+}
+
+std::string hexDump(const char* data, size_t size, size_t lineWidth)
+{
+    std::ostringstream oss;
+
+    for (size_t i = 0; i < size; i += lineWidth)
+    {
+        // Print the offset
+        oss << std::setw(8) << std::setfill('0') << std::hex << i << ": ";
+
+        // Print hexadecimal values
+        for (size_t j = 0; j < lineWidth; ++j)
+        {
+            if (i + j < size)
+            {
+                oss << std::setw(2) << static_cast<int>(static_cast<unsigned char>(data[i + j])) << " ";
+            } else
+            {
+                oss << "   "; // Padding for alignment
+            }
+        }
+
+        oss << " ";
+
+        // Print ASCII characters
+        for (size_t j = 0; j < lineWidth; ++j)
+        {
+            if (i + j < size)
+            {
+                char c = data[i + j];
+                oss << (std::isprint(static_cast<unsigned char>(c)) ? c : '.');
+            }
+        }
+
+        oss << "\n";
+    }
+
+    return oss.str();
 }

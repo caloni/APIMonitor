@@ -17,6 +17,10 @@ decltype(CredReadW)* Orig_CredReadW = ::CredReadW;
 decltype(CoCreateInstance)* Orig_CoCreateInstance = ::CoCreateInstance;
 decltype(OpenProcessToken)* Orig_OpenProcessToken = ::OpenProcessToken;
 decltype(OpenThreadToken)* Orig_OpenThreadToken = ::OpenThreadToken;
+decltype(DuplicateToken)* Orig_DuplicateToken = ::DuplicateToken;
+decltype(DuplicateTokenEx)* Orig_DuplicateTokenEx = ::DuplicateTokenEx;
+decltype(WTSQueryUserToken)* Orig_WTSQueryUserToken = ::WTSQueryUserToken;
+decltype(CreateProcessAsUserW)* Orig_CreateProcessAsUserW = ::CreateProcessAsUserW;
 
 LRESULT WINAPI Hook_SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -113,14 +117,59 @@ HRESULT STDAPICALLTYPE Hook_CoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOute
 BOOL WINAPI Hook_OpenProcessToken(HANDLE ProcessHandle, DWORD DesiredAccess, PHANDLE TokenHandle)
 {
     BOOL result = Orig_OpenProcessToken(ProcessHandle, DesiredAccess, TokenHandle);
-    LogFormat("Hook_OpenProcessToken %08X %08X %08X %d", ProcessHandle, DesiredAccess, TokenHandle, result);
+    DWORD gle = result ? 0 : GetLastError();
+    LogFormat("Hook_OpenProcessToken %08X %08X %08X %d %d", ProcessHandle, DesiredAccess, TokenHandle ? *TokenHandle : 0, result, gle);
     return result;
 }
 
 BOOL WINAPI Hook_OpenThreadToken(HANDLE ThreadHandle, DWORD DesiredAccess, BOOL OpenAsSelf, PHANDLE TokenHandle)
 {
     BOOL result = Orig_OpenThreadToken(ThreadHandle, DesiredAccess, OpenAsSelf, TokenHandle);
-    LogFormat("Hook_OpenProcessToken %08X %08X %d %08X %d", ThreadHandle, DesiredAccess, OpenAsSelf, TokenHandle, result);
+    LogFormat("Hook_OpenProcessToken %08X %08X %d %08X %d", ThreadHandle, DesiredAccess, OpenAsSelf, TokenHandle ? *TokenHandle : 0, result);
+    return result;
+}
+
+BOOL WINAPI Hook_DuplicateToken(HANDLE ExistingTokenHandle, SECURITY_IMPERSONATION_LEVEL ImpersonationLevel, PHANDLE DuplicateTokenHandle)
+{
+    BOOL result = Orig_DuplicateToken(ExistingTokenHandle, ImpersonationLevel, DuplicateTokenHandle);
+    LogFormat("Hook_DuplicateToken %08X %d %08X %d", ExistingTokenHandle, ImpersonationLevel, DuplicateTokenHandle, result);
+    return result;
+}
+
+BOOL WINAPI Hook_DuplicateTokenEx(HANDLE hExistingToken, DWORD dwDesiredAccess, LPSECURITY_ATTRIBUTES lpTokenAttributes, SECURITY_IMPERSONATION_LEVEL ImpersonationLevel, TOKEN_TYPE TokenType, PHANDLE phNewToken)
+{
+    /*
+    char buffer[2048] = { 0 };
+    DWORD bufferLen = 2048;
+    for( int tokenInfo = 1; tokenInfo <= MaxTokenInfoClass; ++tokenInfo )
+    {
+        DWORD resultLen = bufferLen;
+        BOOL result = GetTokenInformation(hExistingToken, (TOKEN_INFORMATION_CLASS)tokenInfo, buffer, bufferLen, &resultLen);
+        if( result )
+        {
+            std::string resultDump = hexDump(buffer, min(resultLen, 512), resultLen);
+            LogFormat("TokenInfo %d %d bytes %s", tokenInfo, resultLen, resultDump.c_str());
+        }
+    }
+    */
+
+    BOOL result = Orig_DuplicateTokenEx(hExistingToken, dwDesiredAccess, lpTokenAttributes, ImpersonationLevel, TokenType, phNewToken);
+    DWORD gle = result ? 0 : GetLastError();
+    LogFormat("Hook_DuplicateTokenEx %08X %08X %d %d %08X %d %d", hExistingToken, dwDesiredAccess, ImpersonationLevel, TokenType, phNewToken ? *phNewToken : 0, result, gle);
+    return result;
+}
+
+BOOL WINAPI Hook_WTSQueryUserToken(ULONG SessionId, PHANDLE phToken)
+{
+    BOOL result = Orig_WTSQueryUserToken(SessionId, phToken);
+    LogFormat("Hook_WTSQueryUserToken %d %08X %d", SessionId, phToken ? *phToken : 0, result);
+    return result;
+}
+
+BOOL WINAPI Hook_CreateProcessAsUserW(HANDLE hToken, LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)
+{
+    BOOL result = Orig_CreateProcessAsUserW(hToken, lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
+    LogFormat("Hook_CreateProcessAsUserW %08X %S %S %d %08X %S %d", hToken, lpApplicationName, lpCommandLine, bInheritHandles, dwCreationFlags, lpCurrentDirectory, result);
     return result;
 }
 

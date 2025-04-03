@@ -20,6 +20,8 @@ a hard coded list of APIs.
 #include <mutex>
 #include <vector>
 
+#pragma comment(lib, "Wtsapi32.lib")
+
 using namespace std;
 
 struct Hook
@@ -49,6 +51,11 @@ static Hook g_hooks[] =
     { (PVOID&)Orig_CredReadW, Hook_CredReadW, false },
     { (PVOID&)Orig_CoCreateInstance, Hook_CoCreateInstance, false },
     { (PVOID&)Orig_OpenProcessToken, Hook_OpenProcessToken, true },
+    { (PVOID&)Orig_OpenThreadToken, Hook_OpenThreadToken, true },
+    { (PVOID&)Orig_DuplicateToken, Hook_DuplicateToken, true },
+    { (PVOID&)Orig_DuplicateTokenEx, Hook_DuplicateTokenEx, true },
+    { (PVOID&)Orig_WTSQueryUserToken, Hook_WTSQueryUserToken, true },
+    { (PVOID&)Orig_CreateProcessAsUserW, Hook_CreateProcessAsUserW, true },
 };
 
 static void InstallHooks()
